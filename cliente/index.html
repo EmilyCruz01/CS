@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PINGPONG</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        #chat {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
+    <script src="libraries/p5.js" type="text/javascript"></script>
+    <script src="libraries/p5.dom.js" type="text/javascript"></script>
+    <script src="libraries/p5.sound.js" type="text/javascript"></script>
+    <script src="sketch.js" type="text/javascript"></script>
+    <script src="player.js" type="text/javascript"></script>
+    <script src="ball.js" type="text/javascript"></script>
+
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Type your message">
+    <button onclick="sendMessage()">Send</button>
+
+    <h2>Jugadores Conectados</h2>
+    <p id="jugadoresConectados"></p>
+
+    <script>
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            if (message.trim() !== '') {
+                fetch('/sendChatMessage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            document.getElementById('messageInput').value = '';
+                        } else {
+                            console.error('Failed to send message.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        }
+
+        function displayChatMessage(message) {
+            const chatDiv = document.getElementById('chat');
+            const messageElement = document.createElement('p');
+            messageElement.innerHTML = `<strong>${message.sender}:</strong> ${message.text}`;
+            chatDiv.appendChild(messageElement);
+        }
+
+        function getChatMessages() {
+            fetch('/getChatMessages')
+                .then(response => response.json())
+                .then(data => {
+                    const chatDiv = document.getElementById('chat');
+                    chatDiv.innerHTML = ''; 
+
+                    if (data.messages) {
+                        data.messages.forEach(message => {
+                            displayChatMessage(message);
+                        });
+                    }
+                    getChatMessages();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        getChatMessages();
+    </script>
+
+    <script>
+        function obtenerJugadoresConectados() {
+            fetch('/getPlayersCount')
+                .then(response => response.json())
+                .then(data => {
+                    const jugadoresConectados = data.count;
+                    document.getElementById('jugadoresConectados').innerText = `Jugadores conectados: ${jugadoresConectados}`;
+                })
+                .catch(error => {
+                    console.error('Error al obtener jugadores conectados:', error);
+                });
+        }
+
+        setInterval(obtenerJugadoresConectados, 3000);
+    </script>
+</body>
+</html>
